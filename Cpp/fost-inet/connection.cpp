@@ -449,26 +449,26 @@ struct network_connection::state {
 //         const throw () {
 //     return L"Socket error";
 // }
-//
-//
-// /*
-//     fostlib::exceptions::connect_failure
-// */
-//
-//
-// fostlib::exceptions::connect_failure::connect_failure(
-//     boost::system::error_code error, const host &h, port_number p
-// ) throw ()
-// : socket_error(error) {
-//     insert(data(), "host", h);
-//     insert(data(), "port", p);
-// }
-//
-//
-// fostlib::wliteral const fostlib::exceptions::connect_failure::message()
-//         const throw () {
-//     return L"Network connection failure";
-// }
+
+
+/*
+    fostlib::exceptions::connect_failure
+*/
+
+
+fostlib::exceptions::connect_failure::connect_failure(
+    boost::system::error_code error, const host &h, port_number p
+) throw ()
+: socket_error(error) {
+    insert(data(), "host", h);
+    insert(data(), "port", p);
+}
+
+
+fostlib::wliteral const fostlib::exceptions::connect_failure::message()
+        const throw () {
+    return L"Network connection failure";
+}
 
 
 /*
