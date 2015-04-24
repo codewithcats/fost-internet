@@ -22,12 +22,9 @@ namespace fostlib {
 
 
     /// A TCP/IP network connection from either a server or client
-    class FOST_INET_DECLSPEC network_connection : boost::noncopyable {
-        struct ssl;
-        boost::asio::io_service &io_service;
-        std::auto_ptr< boost::asio::ip::tcp::socket > m_socket;
-        boost::asio::streambuf m_input_buffer;
-        ssl *m_ssl_data;
+    class FOST_INET_DECLSPEC network_connection final : boost::noncopyable {
+        struct state;
+        std::unique_ptr<state> pimpl;
     public:
         /// Used for server end points where accept returns a socket
         network_connection(boost::asio::io_service &io_service, std::auto_ptr< boost::asio::ip::tcp::socket > socket);
@@ -36,7 +33,6 @@ namespace fostlib {
 
         /// Non-virtual destructor so sub-classing is not allowed
         ~network_connection();
-
 
         /// Start SSL on this connection. After a successful handshake all traffic will be over SSL.
         void start_ssl();
