@@ -59,7 +59,6 @@ struct network_connection::state {
     timer time;
     boost::asio::io_service &io_service;
     std::unique_ptr<boost::asio::ip::tcp::socket > socket;
-    boost::asio::streambuf input_buffer;
 
     state(boost::asio::io_service &io_service)
     : number(++g_network_counter), io_service(io_service) {
