@@ -33,7 +33,7 @@ namespace fostlib {
         /// Used for clients where a host is connected to on a given port number
         network_connection(const host &h, nullable< port_number > p = null);
 
-        /// Non-virtual destructor so sub-classing is not allowed
+        /// Allow us to use incomplete pimpl type
         ~network_connection();
 
         /// Start SSL on this connection. After a successful handshake all traffic will be over SSL.

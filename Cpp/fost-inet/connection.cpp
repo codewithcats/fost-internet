@@ -326,16 +326,15 @@ fostlib::network_connection::network_connection(
 //         connect(io_service, *m_socket, h, port);
 // }
 //
-// fostlib::network_connection::~network_connection() {
-//     delete m_ssl_data;
-// }
-//
-//
 // void fostlib::network_connection::start_ssl() {
 //     m_ssl_data = new ssl(io_service, *m_socket);
 // }
 //
 //
+fostlib::network_connection::~network_connection() {
+}
+
+
 // network_connection &fostlib::network_connection::operator << ( const const_memory_block &p ) {
 //     const unsigned char
 //         *begin = reinterpret_cast< const unsigned char * >( p.first ),
