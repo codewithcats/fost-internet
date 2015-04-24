@@ -26,6 +26,8 @@ using namespace fostlib;
 
 
 namespace {
+
+
     const setting< int64_t > c_connect_timeout(
         "fost-internet/Cpp/fost-inet/connection.cpp",
         "Network settings", "Connect time out", 10, true);
@@ -41,13 +43,23 @@ namespace {
     const setting< string > c_socks_host(
         "fost-internet/Cpp/fost-inet/connection.cpp",
         "Network settings", "Socks host", L"localhost:8888", true);
+
+
+    std::atomic<int64_t> g_network_counter{};
+
+
 }
 
 
 struct network_connection::state {
+    int64_t number;
     boost::asio::io_service &io_service;
     std::unique_ptr<boost::asio::ip::tcp::socket > socket;
     boost::asio::streambuf input_buffer;
+
+    state(boost::asio::io_service &io_service)
+    : number(++g_network_counter), io_service(io_service) {
+    }
 };
 
 
@@ -67,8 +79,8 @@ struct network_connection::state {
 //     : ssl_data(io_service, sock) {
 //     }
 // };
-// namespace {
-//
+namespace {
+
 //     void handle_error(
 //         nliteral func, nliteral msg,
 //         const boost::system::error_code &error
@@ -260,14 +272,11 @@ struct network_connection::state {
 //         if ( connect_error )
 //             throw exceptions::connect_failure(connect_error, host, port);
 //     }
-//
-//
-//     std::atomic<int64_t> g_network_counter{};
-//
-//
-// }
-//
-//
+
+
+}
+
+
 // fostlib::network_connection::network_connection(
 //     boost::asio::io_service &io_service, std::auto_ptr< boost::asio::ip::tcp::socket > socket
 // ) : connection_id(++g_network_counter),
