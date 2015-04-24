@@ -401,54 +401,54 @@ struct network_connection::state {
 //         throw exceptions::read_error(error);
 //     }
 // }
-//
-//
-// /*
-//     fostlib::exceptions::socket_error
-// */
-//
-//
-// fostlib::exceptions::socket_error::socket_error() throw () {
-// }
-//
-// fostlib::exceptions::socket_error::socket_error(
-//     const string &message
-// ) throw ()
-// : exception(message) {
-// }
-//
-// fostlib::exceptions::socket_error::socket_error(
-//     const string &message, const string &extra
-// ) throw ()
-// : exception(message) {
-//     insert(data(), "context", extra);
-// }
-//
-// fostlib::exceptions::socket_error::socket_error(
-//     boost::system::error_code error
-// ) throw ()
-// : error(error) {
-//     insert(data(), "error", string(boost::lexical_cast<std::string>(error).c_str()));
-// }
-//
-// fostlib::exceptions::socket_error::socket_error(
-//     boost::system::error_code error, const string &message
-// ) throw ()
-// : exception(message), error(error) {
-//     insert(data(), "error", string(boost::lexical_cast<std::string>(error).c_str()));
-// }
-//
-// fostlib::exceptions::socket_error::~socket_error() throw ()
-// try {
-// } catch ( ... ) {
-//     fostlib::absorb_exception();
-// }
-//
-//
-// wliteral const fostlib::exceptions::socket_error::message()
-//         const throw () {
-//     return L"Socket error";
-// }
+
+
+/*
+    fostlib::exceptions::socket_error
+*/
+
+
+fostlib::exceptions::socket_error::socket_error() throw () {
+}
+
+fostlib::exceptions::socket_error::socket_error(
+    const string &message
+) throw ()
+: exception(message) {
+}
+
+fostlib::exceptions::socket_error::socket_error(
+    const string &message, const string &extra
+) throw ()
+: exception(message) {
+    insert(data(), "context", extra);
+}
+
+fostlib::exceptions::socket_error::socket_error(
+    boost::system::error_code error
+) throw ()
+: error(error) {
+    insert(data(), "error", string(boost::lexical_cast<std::string>(error).c_str()));
+}
+
+fostlib::exceptions::socket_error::socket_error(
+    boost::system::error_code error, const string &message
+) throw ()
+: exception(message), error(error) {
+    insert(data(), "error", string(boost::lexical_cast<std::string>(error).c_str()));
+}
+
+fostlib::exceptions::socket_error::~socket_error() throw ()
+try {
+} catch ( ... ) {
+    fostlib::absorb_exception();
+}
+
+
+wliteral const fostlib::exceptions::socket_error::message()
+        const throw () {
+    return L"Socket error";
+}
 
 
 /*
