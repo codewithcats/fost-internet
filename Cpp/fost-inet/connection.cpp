@@ -28,6 +28,7 @@
 
 
 using namespace fostlib;
+namespace asio = boost::asio;
 
 
 namespace {
@@ -55,7 +56,7 @@ namespace {
 
 
     /// ASIO IO service for client connections
-    boost::asio::io_service g_client_service;
+    asio::io_service g_client_service;
 
 
 }
@@ -63,32 +64,32 @@ namespace {
 
 struct ssl_data {
     ssl_data(
-        boost::asio::io_service &io_service, boost::asio::ip::tcp::socket &sock
-    ) : ctx(io_service, boost::asio::ssl::context::sslv23_client), socket(sock, ctx) {
-        socket.handshake(boost::asio::ssl::stream_base::client);
+        asio::io_service &io_service, asio::ip::tcp::socket &sock
+    ) : ctx(io_service, asio::ssl::context::sslv23_client), socket(sock, ctx) {
+        socket.handshake(asio::ssl::stream_base::client);
     }
 
-    boost::asio::ssl::context ctx;
-    boost::asio::ssl::stream< boost::asio::ip::tcp::socket& > socket;
+    asio::ssl::context ctx;
+    asio::ssl::stream< asio::ip::tcp::socket& > socket;
 };
 
 
 struct network_connection::state {
     int64_t number;
     timer time;
-    boost::asio::io_service &io_service;
-    std::unique_ptr<boost::asio::ip::tcp::socket> socket;
+    asio::io_service &io_service;
+    std::unique_ptr<asio::ip::tcp::socket> socket;
     std::unique_ptr<ssl_data> ssl;
 
-    boost::asio::streambuf input_buffer;
+    asio::streambuf input_buffer;
 
     std::mutex mutex;
     std::condition_variable signal;
     int connect_timeout, read_timeout;
 
     state(
-        boost::asio::io_service &io_service,
-        std::unique_ptr<boost::asio::ip::tcp::socket > s
+        asio::io_service &io_service,
+        std::unique_ptr<asio::ip::tcp::socket > s
     ) : number(++g_network_counter), io_service(io_service),
             socket(std::move(s)),
             connect_timeout(coerce<int>(c_connect_timeout.value())),
@@ -101,18 +102,18 @@ struct network_connection::state {
 
 
     void connect(const host &host, port_number port) {
-        using namespace boost::asio::ip;
+        using namespace asio::ip;
         tcp::resolver resolver(io_service);
         tcp::resolver::query q(
             coerce<ascii_string>(host.name()).underlying(),
             coerce<ascii_string>(coerce<string>(port)).underlying());
         boost::system::error_code host_error;
         tcp::resolver::iterator endpoint = resolver.resolve(q, host_error), end;
-        if ( host_error == boost::asio::error::host_not_found ) {
+        if ( host_error == asio::error::host_not_found ) {
             throw exceptions::host_not_found( host.name() );
         }
         boost::system::error_code connect_error =
-            boost::asio::error::host_not_found;
+            asio::error::host_not_found;
         while ( connect_error && endpoint != end ) {
             std::unique_lock<std::mutex> lock(mutex);
             socket->async_connect(*endpoint++, [this, &connect_error](
@@ -128,7 +129,7 @@ struct network_connection::state {
                     return;
                 }
             } else {
-                connect_error = boost::asio::error::timed_out;
+                connect_error = asio::error::timed_out;
                 socket->close();
             }
         }
@@ -138,7 +139,7 @@ struct network_connection::state {
     }
 
     void check_error(const boost::system::error_code &error, nliteral message) {
-        if ( error == boost::asio::error::eof ) {
+        if ( error == asio::error::eof ) {
             socket->close();
             throw exceptions::unexpected_eof(message);
         } else if ( error ) {
@@ -162,9 +163,9 @@ struct network_connection::state {
             signal.notify_one();
         };
         if ( ssl ) {
-            boost::asio::async_write(ssl->socket, b, handler);
+            asio::async_write(ssl->socket, b, handler);
         } else {
-            boost::asio::async_write(*socket, b, handler);
+            asio::async_write(*socket, b, handler);
         }
         signal.wait(lock); // Shouldn't need a time out on writes
         check_error(error, message);
@@ -194,7 +195,7 @@ struct network_connection::state {
             return data;
         } else {
             socket->close();
-            throw exceptions::socket_error(boost::asio::error::timed_out, message);
+            throw exceptions::socket_error(asio::error::timed_out, message);
         }
     }
 };
@@ -311,15 +312,15 @@ namespace {
 
 
 fostlib::network_connection::network_connection(
-    boost::asio::io_service &io_service, std::unique_ptr< boost::asio::ip::tcp::socket > socket
+    asio::io_service &io_service, std::unique_ptr< asio::ip::tcp::socket > socket
 ) : pimpl(new state(io_service, std::move(socket))) {
 }
 
 
 fostlib::network_connection::network_connection(const host &h, nullable< port_number > p)
 : pimpl(new state(g_client_service,
-        std::unique_ptr<boost::asio::ip::tcp::socket>(
-            new boost::asio::ip::tcp::socket(g_client_service)))) {
+        std::unique_ptr<asio::ip::tcp::socket>(
+            new asio::ip::tcp::socket(g_client_service)))) {
     const port_number port = p.value(coerce<port_number>(h.service().value("0")));
     json socks(c_socks_version.value());
 
@@ -333,13 +334,13 @@ fostlib::network_connection::network_connection(const host &h, nullable< port_nu
             buffer[1] = 0x01; // stream
             buffer[2] = (port & 0xff00) >> 8; // MS byte for port
             buffer[3] = port & 0xff; // LS byte for port
-            boost::asio::ip::address_v4::bytes_type bytes(h.address().to_v4().to_bytes());
+            asio::ip::address_v4::bytes_type bytes(h.address().to_v4().to_bytes());
             for ( std::size_t p = 0; p < 4; ++p )
                 buffer[4+p] = bytes[p];
             buffer[8] = 0x00; // User ID
-            pimpl->send(boost::asio::buffer(buffer), "Trying to establish SOCKS connection");
+            pimpl->send(asio::buffer(buffer), "Trying to establish SOCKS connection");
             // Receive the response
-            std::vector<utf8> data{pimpl->read(8, "Trying to read SOCKS response")};
+            std::vector<utf8> data{pimpl->read(asio::transfer_at_least(8), "Trying to read SOCKS response")};
             if ( data[0] != 0x00 || data[1] != 0x5a ) {
                 throw exceptions::socket_error("SOCKS 4 error handling where the response values are not 0x00 0x5a");
             }
@@ -368,13 +369,13 @@ network_connection &fostlib::network_connection::operator << (const const_memory
     ;
     std::size_t length = end - begin;
     if ( length ) {
-        pimpl->send(boost::asio::buffer(begin, length), "Sending memory block");
+        pimpl->send(asio::buffer(begin, length), "Sending memory block");
     }
     return *this;
 }
 network_connection &fostlib::network_connection::operator << (const utf8_string &s) {
     if ( not s.empty() ) {
-        pimpl->send(boost::asio::buffer(s.underlying().c_str(), s.underlying().length()),
+        pimpl->send(asio::buffer(s.underlying().c_str(), s.underlying().length()),
             "Sending UTF8 string");
     }
     return *this;
@@ -382,7 +383,7 @@ network_connection &fostlib::network_connection::operator << (const utf8_string 
 network_connection &fostlib::network_connection::operator << (const std::stringstream &ss) {
     std::string s(ss.str());
     if ( not s.empty() ) {
-        pimpl->send(boost::asio::buffer(s.c_str(), s.length()), "Sending stringstream");
+        pimpl->send(asio::buffer(s.c_str(), s.length()), "Sending stringstream");
     }
     return *this;
 }
