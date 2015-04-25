@@ -147,7 +147,8 @@ struct network_connection::state {
         }
     }
 
-    std::size_t send(boost::asio::streambuf &b, nliteral message) {
+    template<typename B>
+    std::size_t send(const B &b, nliteral message) {
         boost::system::error_code error{};
         std::unique_lock<std::mutex> lock(mutex);
         std::size_t sent{};
@@ -326,16 +327,17 @@ fostlib::network_connection::network_connection(const host &h, nullable< port_nu
         const host socks_host( coerce< host >( c_socks_host.value() ) );
         pimpl->connect(socks_host, coerce<port_number>(socks_host.service().value("0")));
         if ( c_socks_version.value() == json(4) ) {
-            boost::asio::streambuf b;
+            std::vector<unsigned char> buffer(9);
             // Build and send the command to establish the connection
-            b.sputc(0x4); // SOCKS v 4
-            b.sputc(0x1); // stream
-            b.sputc((port & 0xff00) >> 8); b.sputc(port & 0xff); // Destination port
-            boost::asio::ip::address_v4::bytes_type bytes( h.address().to_v4().to_bytes() );
+            buffer[0] = 0x04; // SOCKS v4
+            buffer[1] = 0x01; // stream
+            buffer[2] = (port & 0xff00) >> 8; // MS byte for port
+            buffer[3] = port & 0xff; // LS byte for port
+            boost::asio::ip::address_v4::bytes_type bytes(h.address().to_v4().to_bytes());
             for ( std::size_t p = 0; p < 4; ++p )
-                b.sputc(bytes[p]);
-            b.sputc(0); // User ID
-            pimpl->send(b, "Trying to establish SOCKS connection");
+                buffer[4+p] = bytes[p];
+            buffer[8] = 0x00; // User ID
+            pimpl->send(boost::asio::buffer(buffer), "Trying to establish SOCKS connection");
             // Receive the response
             std::vector<utf8> data{pimpl->read(8, "Trying to read SOCKS response")};
             if ( data[0] != 0x00 || data[1] != 0x5a ) {
@@ -359,21 +361,17 @@ void fostlib::network_connection::start_ssl() {
 }
 
 
-// network_connection &fostlib::network_connection::operator << ( const const_memory_block &p ) {
-//     const unsigned char
-//         *begin = reinterpret_cast< const unsigned char * >( p.first ),
-//         *end =  reinterpret_cast< const unsigned char * >( p.second )
-//     ;
-//     std::size_t length = end - begin;
-//     if ( length ) {
-//         boost::asio::streambuf b;
-//         for ( std::size_t pos = 0; pos != length; ++pos )
-//             b.sputc( begin[pos] );
-//         std::size_t sent(send(*m_socket, m_ssl_data, b));
-//         b.consume(sent);
-//     }
-//     return *this;
-// }
+network_connection &fostlib::network_connection::operator << ( const const_memory_block &p ) {
+    const unsigned char
+        *begin = reinterpret_cast< const unsigned char * >( p.first ),
+        *end =  reinterpret_cast< const unsigned char * >( p.second )
+    ;
+    std::size_t length = end - begin;
+    if ( length ) {
+        pimpl->send(boost::asio::buffer(begin, length), "Sending memory block");
+    }
+    return *this;
+}
 // network_connection &fostlib::network_connection::operator << ( const utf8_string &s ) {
 //     boost::asio::streambuf b;
 //     std::ostream os(&b);
