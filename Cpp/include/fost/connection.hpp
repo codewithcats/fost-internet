@@ -40,20 +40,19 @@ namespace fostlib {
         void start_ssl();
 
         /// Immediately push data over the network
-        network_connection &operator << ( const const_memory_block & );
+        network_connection &operator << (const const_memory_block &);
         /// Immediately push data over the network
-        network_connection &operator << ( const utf8_string &s );
+        network_connection &operator << (const utf8_string &s);
         /// Immediately push data over the network
-        network_connection &operator << ( const std::stringstream &ss );
+        network_connection &operator << (const std::stringstream &ss);
 
         /// Read up until the next \r\n which is discarded
-        network_connection &operator >> ( std::string &s );
+        network_connection &operator >> (std::string &s);
         /// Read up until the next \r\n which is discarded and decode the line as UTF-8
-        network_connection &operator >> ( utf8_string &s );
-        /// Read into the vector. The vector size must match the number of bytes expected.
-        network_connection &operator >> ( std::vector< utf8 > &v );
-        /// Read everything until the connection is dropped by the server
-        void operator >> ( boost::asio::streambuf &b );
+        network_connection &operator >> (utf8_string &s);
+        /// Read into the vector. Reads a maximum of the vector size number of bytes.
+        /// If less bytes are read then the vector is resized down to the read amount
+        network_connection &operator >> (std::vector<unsigned char> &v);
     };
 
 
