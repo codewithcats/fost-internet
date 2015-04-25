@@ -383,14 +383,14 @@ network_connection &fostlib::network_connection::operator << ( const const_memor
 // network_connection &fostlib::network_connection::operator << ( const std::stringstream &ss ) {
 //     return this->operator << ( ss.str() );
 // }
-//
-//
-// network_connection &fostlib::network_connection::operator >> ( utf8_string &s ) {
-//     std::string next;
-//     (*this) >> next;
-//     s += utf8_string(next);
-//     return *this;
-// }
+
+
+network_connection &fostlib::network_connection::operator >> ( utf8_string &s ) {
+    std::string next;
+    (*this) >> next;
+    s += utf8_string(next);
+    return *this;
+}
 // network_connection &fostlib::network_connection::operator >> ( std::string &s ) {
 //     std::cout << connection_id << " " << timestamp::now() << " Starting string read" << std::endl;
 //     std::size_t length(read_until(*m_socket, m_ssl_data, m_input_buffer, "\r\n"));
