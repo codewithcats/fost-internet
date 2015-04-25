@@ -115,13 +115,18 @@ struct network_connection::state {
             boost::asio::error::host_not_found;
         while ( connect_error && endpoint != end ) {
             std::unique_lock<std::mutex> lock(mutex);
-            socket->async_connect(*endpoint++, [this]() {
+            socket->async_connect(*endpoint++, [this, &connect_error](
+                const boost::system::error_code &e
+            ) {
+                std::unique_lock<std::mutex> lock(mutex);
+                connect_error = e;
                 signal.notify_one();
             });
             if ( signal.wait_for(lock, std::chrono::seconds(connect_timeout)) ==
                     std::cv_status::no_timeout ) {
-                // Got a good connection, let's use it
-                return;
+                if ( not connect_error ) {
+                    return;
+                }
             } else {
                 connect_error = boost::asio::error::timed_out;
                 socket->close();
@@ -252,12 +257,6 @@ namespace {
 //             timer.async_wait(boost::lambda::bind(&timedout,
 //                 boost::ref(sock), boost::ref(timeout_result),
 //                 boost::lambda::_1));
-//         }
-//
-//         connect_async_function_type connect_async_function() {
-//             return boost::lambda::bind(&connect_done,
-//                 boost::ref(timer), boost::ref(read_result),
-//                 boost::lambda::_1);
 //         }
 //
 //         std::size_t complete() {
