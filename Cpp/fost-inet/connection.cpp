@@ -379,9 +379,13 @@ network_connection &fostlib::network_connection::operator << (const utf8_string 
     }
     return *this;
 }
-// network_connection &fostlib::network_connection::operator << ( const std::stringstream &ss ) {
-//     return this->operator << ( ss.str() );
-// }
+network_connection &fostlib::network_connection::operator << (const std::stringstream &ss) {
+    std::string s(ss.str());
+    if ( not s.empty() ) {
+        pimpl->send(boost::asio::buffer(s.c_str(), s.length()), "Sending stringstream");
+    }
+    return *this;
+}
 
 
 network_connection &fostlib::network_connection::operator >> ( utf8_string &s ) {
