@@ -27,11 +27,11 @@ fostlib::http::server::server( const host &h, uint16_t p )
 ) {
 }
 
-std::auto_ptr< http::server::request > fostlib::http::server::operator () () {
-    std::unique_ptr< boost::asio::ip::tcp::socket > sock(
+std::unique_ptr<http::server::request> fostlib::http::server::operator () () {
+    std::unique_ptr<boost::asio::ip::tcp::socket> sock(
         new boost::asio::ip::tcp::socket(m_service));
     m_server.accept(*sock);
-    return std::auto_ptr< http::server::request >(
+    return std::unique_ptr<http::server::request>(
         new http::server::request(m_service, std::move(sock)));
 }
 
@@ -212,7 +212,7 @@ fostlib::http::server::request::request(
 fostlib::http::server::request::request(
     const string &method,
     const url::filepath_string &filespec,
-    std::auto_ptr< binary_body > headers_and_body,
+    std::unique_ptr<binary_body> headers_and_body,
     const url::query_string &qs
 ) : m_handler(raise_connection_error),
         m_method( method ), m_pathspec( filespec ), m_query_string(qs),
@@ -224,7 +224,7 @@ fostlib::http::server::request::request(
     const string &method,
     const url::filepath_string &filespec,
     const url::query_string &qs,
-    std::auto_ptr< binary_body > headers_and_body
+    std::unique_ptr<binary_body> headers_and_body
 ) : m_handler(raise_connection_error),
         m_method( method ), m_pathspec( filespec ), m_query_string(qs),
         m_mime( headers_and_body.get()
@@ -234,7 +234,7 @@ fostlib::http::server::request::request(
 
 fostlib::http::server::request::request(
     const string &method, const url::filepath_string &filespec,
-    std::auto_ptr< binary_body > headers_and_body,
+    std::unique_ptr<binary_body> headers_and_body,
     boost::function<void (const mime&, const ascii_string&)> handler
 ) : m_handler(handler),
         m_method( method ), m_pathspec( filespec ),

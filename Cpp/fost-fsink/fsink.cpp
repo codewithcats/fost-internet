@@ -1,5 +1,5 @@
 /*
-    Copyright 2010, Felspar Co Ltd. http://support.felspar.com/
+    Copyright 2010-2015, Felspar Co Ltd. http://support.felspar.com/
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -22,13 +22,13 @@ namespace {
 
 FSL_MAIN(
     L"fsink",
-    L"fsink - Fost logging sink\nCopyright (c) 1995-2010, Felspar Co. Ltd."
+    L"fsink - Fost logging sink\nCopyright (c) 1995-2015, Felspar Co. Ltd."
 )( fostlib::ostream &out, fostlib::arguments &args ) {
     http::server server( host( args[1].value(c_host.value()) ), c_port.value() );
     out << L"Answering requests on "
         L"http://" << server.binding() << L":" << server.port() << L"/" << std::endl;
     for ( bool process( true ); process; ) {
-        std::auto_ptr< http::server::request > req( server() );
+        std::unique_ptr<http::server::request> req(server());
         if ( req->method() == "PUT" ) {
             text_body response(L"Accepted\n", mime::mime_headers(), L"text/plain");
             typedef mime::const_iterator cit;
