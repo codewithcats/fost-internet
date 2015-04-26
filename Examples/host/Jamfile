@@ -1,6 +1,7 @@
 
 fost-exe host
     :
+        ../../../fost-base/Cpp/fost-datetime/
         ../../Cpp/fost-inet/
         host-main.cpp
     ;
