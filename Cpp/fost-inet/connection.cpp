@@ -121,6 +121,7 @@ struct network_connection::state {
             ) {
                 std::unique_lock<std::mutex> lock(mutex);
                 connect_error = e;
+                lock.unlock();
                 signal.notify_one();
             });
             if ( signal.wait_for(lock, std::chrono::seconds(connect_timeout)) ==
