@@ -6,14 +6,22 @@
 */
 
 
+#pragma once
+
+
+#include <fost/connection.hpp>
+
+
 namespace fostlib {
 
 
     /// Implement a server accept socket
-    class server {
-    private:
-        boost::asio::io_service m_service;
-        boost::asio::ip::tcp::acceptor m_server;
+    class network_connection::server final : boost::noncopyable {
+        struct state;
+        std::unique_ptr<state> pimpl;
+    public:
+        /// Destructor so we can use pimpl
+        ~server();
     };
 
 

@@ -26,6 +26,9 @@ namespace fostlib {
         struct state;
         std::unique_ptr<state> pimpl;
     public:
+        /// Used when we want a server socket to listen for connections
+        class server;
+
         /// Used for server end points where accept returns a socket
         network_connection(
             boost::asio::io_service &io_service,

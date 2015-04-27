@@ -103,7 +103,7 @@ namespace fostlib {
             static nliteral status_text( int code );
 
         private:
-            fostlib::server listener;
+            network_connection::server listener;
         };
 
 
