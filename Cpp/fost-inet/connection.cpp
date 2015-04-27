@@ -356,16 +356,17 @@ network_connection &fostlib::network_connection::operator >> (std::string &s) {
     return *this;
 }
 network_connection &fostlib::network_connection::operator >> (std::vector< utf8 > &v) {
-    const std::size_t chunk = coerce<std::size_t>(c_large_read_chunk_size.value());
-    std::size_t read = 0;
-    while ( read < v.size() ) {
-        std::vector<utf8> block{pimpl->read(
-            asio::transfer_exactly(std::min(v.size() - read, chunk)),
-            "Reading a block of data")};
-        std::copy(block.begin(), block.end(), v.begin() + read);
-        read += block.size();
-    }
-    return *this;
+    throw exceptions::not_implemented("operator >> std::vector");
+//     const std::size_t chunk = coerce<std::size_t>(c_large_read_chunk_size.value());
+//     std::size_t read = 0;
+//     while ( read < v.size() ) {
+//         std::vector<utf8> block{pimpl->read(
+//             asio::transfer_exactly(std::min(v.size() - read, chunk)),
+//             "Reading a block of data")};
+//         std::copy(block.begin(), block.end(), v.begin() + read);
+//         read += block.size();
+//     }
+//     return *this;
 }
 
 
