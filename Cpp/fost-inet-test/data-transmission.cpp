@@ -10,6 +10,9 @@
 #include <fost/log>
 #include <fost/server>
 
+#include <condition_variable>
+#include <mutex>
+
 
 using namespace fostlib;
 
@@ -18,22 +21,36 @@ FSL_TEST_SUITE( data_transmission );
 
 
 namespace {
-    bool embed_acks() {
-        network_connection::server server(host(0), 6218);
-        network_connection cnx(server());
+    // Abstraction of remote thread that will only run a single connection
+    template<void (*Fn)(network_connection&)>
+    bool single_cnx() {
+        std::mutex mutex;
+        std::unique_lock<std::mutex> lock(mutex);
+        std::condition_variable signal;
+        network_connection::server server(host(0), 6218,
+            [&mutex, &signal](network_connection cnx) {
+                std::unique_lock<std::mutex> lock(mutex);
+                Fn(cnx);
+                lock.unlock();
+                signal.notify_one();
+            }
+        );
+        signal.wait(lock);
+        return true;
+    }
 
+    void embed_acks(network_connection &cnx) {
         std::vector<unsigned char> data(0x8000);
         for ( std::size_t block(0); block < 8; ++block) {
             FSL_CHECK_NOTHROW(cnx >> data);
             FSL_CHECK_NOTHROW(cnx << "ack\r\n");
         }
-        return true;
     }
 }
 
 FSL_TEST_FUNCTION( large_send_embed_acks ) {
     worker server;
-    future<bool> ok = server.run<bool>(embed_acks);
+    future<bool> ok = server.run<bool>(&single_cnx<embed_acks>);
     // Give enough time for thread to start
     boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 
@@ -60,18 +77,9 @@ namespace {
     const std::size_t c_blocks = 800;
 #endif
 
-    bool ack_at_end() {
-        boost::asio::io_service service;
-        boost::asio::ip::tcp::acceptor server(
-            service, boost::asio::ip::tcp::endpoint(
-                host("0.0.0.0").address(), 6217));
-        std::unique_ptr<boost::asio::ip::tcp::socket> sock(
-            new boost::asio::ip::tcp::socket( service ));
-        server.accept(*sock);
-        network_connection cnx(service, std::move(sock));
-
+    void ack_at_end(network_connection &cnx) {
         std::vector<unsigned char> data(0x8000);
-        for ( std::size_t block(0); block < c_blocks; ++block )
+        for ( std::size_t block(0); block < c_blocks; ++block ) {
             try {
                 FSL_CHECK_NOTHROW(cnx >> data);
                 for ( std::size_t i(0); i != data.size(); ++i )
@@ -85,14 +93,14 @@ namespace {
                 insert(e.data(), "block-number", block);
                 throw;
             }
+        }
         FSL_CHECK_NOTHROW(cnx << "ack\r\n");
-        return true;
     }
 }
 
 FSL_TEST_FUNCTION( large_send_ack_at_end ) {
     worker server;
-    future<bool> ok = server.run<bool>(ack_at_end);
+    future<bool> ok = server.run<bool>(&single_cnx<ack_at_end>);
     // Give enough time for thread to start
     boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 

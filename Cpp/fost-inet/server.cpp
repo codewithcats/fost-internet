@@ -20,7 +20,7 @@ struct network_connection::server::state {
     boost::asio::io_service io_service;
     boost::asio::ip::tcp::acceptor socket;
 
-    state(const host &h, uint16_t p)
+    state(const host &h, uint16_t p, std::function<void(network_connection)> fn)
     : socket(io_service, asio::ip::tcp::endpoint(h.address(), p)) {
     }
 
@@ -30,8 +30,9 @@ struct network_connection::server::state {
 };
 
 
-network_connection::server::server(const host &h, uint16_t p)
-: pimpl(new state(h, p)) {
+network_connection::server::server(const host &h, uint16_t p,
+        std::function<void(network_connection)> fn)
+: pimpl(new state(h, p, fn)) {
 }
 
 
