@@ -259,7 +259,7 @@ private:
 };
 
 
-fostlib::network_connection::network_connection(network_connection &&cnx)
+fostlib::network_connection::network_connection(network_connection &&cnx) noexcept
 : pimpl(cnx.pimpl.release()) {
 }
 

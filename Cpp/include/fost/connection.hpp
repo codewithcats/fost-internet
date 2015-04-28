@@ -36,7 +36,7 @@ namespace fostlib {
         /// Used for clients where a host is connected to on a given port number
         network_connection(const host &h, nullable< port_number > p = null);
         /// Allow moves
-        network_connection(network_connection &&);
+        network_connection(network_connection &&) noexcept;
 
         /// Allow us to use incomplete pimpl type
         ~network_connection();
