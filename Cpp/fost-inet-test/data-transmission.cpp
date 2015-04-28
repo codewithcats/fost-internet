@@ -8,6 +8,7 @@
 
 #include "fost-inet-test.hpp"
 #include <fost/log>
+#include <fost/server>
 
 
 using namespace fostlib;
@@ -18,14 +19,8 @@ FSL_TEST_SUITE( data_transmission );
 
 namespace {
     bool embed_acks() {
-        boost::asio::io_service service;
-        boost::asio::ip::tcp::acceptor server(
-            service, boost::asio::ip::tcp::endpoint(
-                host("0.0.0.0").address(), 6218));
-        std::unique_ptr< boost::asio::ip::tcp::socket > sock(
-            new boost::asio::ip::tcp::socket(service));
-        server.accept(*sock);
-        network_connection cnx(service, std::move(sock));
+        network_connection::server server(host(0), 6218);
+        network_connection cnx(server());
 
         std::vector<unsigned char> data(0x8000);
         for ( std::size_t block(0); block < 8; ++block) {

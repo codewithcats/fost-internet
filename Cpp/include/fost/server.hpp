@@ -20,8 +20,14 @@ namespace fostlib {
         struct state;
         std::unique_ptr<state> pimpl;
     public:
+        /// Construct a server socket bound to the requested IP and port
+        server(const host &, uint16_t);
+
         /// Destructor so we can use pimpl
         ~server();
+
+        /// Return the next network connection that needs to be dealt with
+        network_connection operator () ();
     };
 
 
