@@ -9,6 +9,7 @@
 #include "fost-inet.hpp"
 #include <fost/server.hpp>
 
+#include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -20,12 +21,15 @@ namespace asio = boost::asio;
 
 struct network_connection::server::state {
     boost::asio::io_service io_service;
+    /// Set to true when we want the message pump to stop
+    std::atomic<bool> stop;
     /// Thread to run all of the IO tasks in
     std::thread io_worker;
-    /// Stop the thread from terminating (until we want it to)
-    std::unique_ptr<asio::io_service::work> work;
-
+    /// The accept socket itself
     boost::asio::ip::tcp::acceptor listener;
+
+    /// The server callback
+    std::function<void(network_connection)> callback;
 
     /*
      * Socket handling is awkward. It's lifetime must at least match the accept handler
@@ -38,8 +42,7 @@ struct network_connection::server::state {
     std::unique_ptr<asio::ip::tcp::socket> socket;
 
     state(const host &h, uint16_t p, std::function<void(network_connection)> fn)
-    : listener(io_service),
-            socket(new asio::ip::tcp::socket(io_service)) {
+    : stop(false), listener(io_service), callback(fn) {
         // Report aborts
         asio::ip::tcp::endpoint endpoint(h.address(), p);
         listener.open(endpoint.protocol());
@@ -53,7 +56,6 @@ struct network_connection::server::state {
         std::condition_variable signal;
         io_worker = std::move(std::thread([this, &mutex, &signal]() {
             std::unique_lock<std::mutex> lock(mutex);
-            work.reset(new asio::io_service::work(io_service));
             lock.unlock();
             signal.notify_one();
             std::cout << "Signalled io_service is running" << std::endl;
@@ -62,6 +64,11 @@ struct network_connection::server::state {
                 again = false;
                 try {
                     io_service.run();
+                    if ( !stop ) {
+                        std::cout << "Run out of work, going again" << std::endl;
+                        again = true;
+                        post_handler();
+                    }
                 } catch ( std::exception &e ) {
                     again = true;
                     std::cout << "Caught " << e.what() << std::endl;
@@ -70,24 +77,30 @@ struct network_connection::server::state {
                     std::cout << "Unknown exception caught" << std::endl;
                 }
             } while ( again );
+            std::cout << "Service thread stopping" << std::endl;
         }));
         signal.wait(lock);
-        auto handler = [this, fn](const boost::system::error_code& error) {
-            std::cout << "Got a connect " << error << std::endl;
-            if ( !error ) {
-                fn(network_connection(io_service, std::move(socket)));
-            }
-            // Re-async_accept here
-        };
-        listener.async_accept(*socket, handler);
         std::cout << "Start up of server complete" << std::endl;
     }
 
     ~state() {
         std::cout << "Server tear down requested" << std::endl;
-        work.reset();
+        stop = true;
         io_service.stop();
         io_worker.join();
+    }
+
+    void post_handler() {
+        std::cout << "Going to listen for another connect" << std::endl;
+        socket.reset(new asio::ip::tcp::socket(io_service));
+        auto handler = [this](const boost::system::error_code& error) {
+            std::cout << "Got a connect " << error << std::endl;
+            if ( !error ) {
+                callback(network_connection(io_service, std::move(socket)));
+            }
+            post_handler();
+        };
+        listener.async_accept(*socket, handler);
     }
 };
 
