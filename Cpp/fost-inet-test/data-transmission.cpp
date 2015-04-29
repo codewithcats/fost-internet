@@ -85,8 +85,10 @@ FSL_TEST_FUNCTION( large_send_ack_at_end ) {
     network_connection cnx(host("localhost"), 6217);
     std::cout << "Connected" << std::endl;
     for ( std::size_t block(0); block < c_blocks; ++block ) {
+        std::cout << "Sending block " << block << std::endl;
         std::string data(0x8000, "0123456789"[block %10]);
         FSL_CHECK_NOTHROW(cnx << data);
+        std::cout << "Data sent for block " << block << std::endl;
     }
     std::cout << "All data sent, waiting for ack" << std::endl;
     std::string ack;

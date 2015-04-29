@@ -361,8 +361,10 @@ network_connection &fostlib::network_connection::operator >> (std::vector< utf8 
     const std::size_t chunk = coerce<std::size_t>(c_large_read_chunk_size.value());
     std::size_t read = 0;
     while ( read < v.size() ) {
+        const std::size_t this_chunk{std::min(v.size() - read, chunk)};
+        std::cout << "Requesting a read of " << this_chunk << " bytes" << std::endl;
         std::vector<utf8> block{pimpl->read(
-            asio::transfer_exactly(std::min(v.size() - read, chunk)),
+            asio::transfer_exactly(this_chunk),
             "Reading a block of data")};
         std::copy(block.begin(), block.end(), v.begin() + read);
         read += block.size();
