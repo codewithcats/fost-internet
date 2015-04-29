@@ -26,19 +26,31 @@ struct network_connection::server::state {
     /// Thread to run all of the IO tasks in
     std::thread io_worker;
     /// The accept socket itself
-    boost::asio::ip::tcp::acceptor listener;
+    boost::asio::ip::tcp::acceptor ipv4_listener;
+    boost::asio::ip::tcp::acceptor ipv6_listener;
 
     /// The server callback
     std::function<void(network_connection)> callback;
 
     state(const host &h, uint16_t p, std::function<void(network_connection)> fn)
-    : stop(false), listener(io_service), callback(fn) {
+    : stop(false), ipv4_listener(io_service), ipv6_listener(io_service), callback(fn) {
         // Report aborts
         asio::ip::tcp::endpoint endpoint(h.address(), p);
-        listener.open(endpoint.protocol());
-        listener.set_option(asio::socket_base::enable_connection_aborted(true));
-        listener.bind(endpoint);
-        listener.listen();
+        if ( endpoint.protocol() == asio::ip::tcp::v4() ) {
+            ipv4_listener.open(endpoint.protocol());
+            ipv4_listener.set_option(asio::socket_base::enable_connection_aborted(true));
+            ipv4_listener.bind(endpoint);
+            ipv4_listener.listen();
+            asio::ip::tcp::endpoint ipv6_end(host("::1").address(), p);
+            ipv6_listener.open(ipv6_end.protocol());
+            ipv6_listener.set_option(asio::socket_base::enable_connection_aborted(true));
+            ipv6_listener.bind(ipv6_end);
+            ipv6_listener.listen();
+        } else {
+            throw exceptions::not_implemented("IPv6 binding");
+        }
+        post_handler(ipv4_listener);
+        post_handler(ipv6_listener);
 
         // Spin up the threads that are going to handle processing
         std::mutex mutex;
@@ -57,7 +69,8 @@ struct network_connection::server::state {
                     if ( !stop ) {
                         std::cout << "Run out of work, going again" << std::endl;
                         again = true;
-                        post_handler();
+                        post_handler(ipv4_listener);
+                        post_handler(ipv6_listener);
                     }
                 } catch ( std::exception &e ) {
                     again = true;
@@ -80,7 +93,7 @@ struct network_connection::server::state {
         io_worker.join();
     }
 
-    void post_handler() {
+    void post_handler(boost::asio::ip::tcp::acceptor&listener) {
         std::cout << "Going to listen for another connect" << std::endl;
         /*
         * Socket handling is awkward. It's lifetime must at least match the accept handler
@@ -91,13 +104,13 @@ struct network_connection::server::state {
         */
         // TODO: Change to std::move captured in the closure in C++14
         asio::ip::tcp::socket *socket(new asio::ip::tcp::socket(io_service));
-        auto handler = [this, socket](const boost::system::error_code& error) {
+        auto handler = [this, socket, &listener](const boost::system::error_code& error) {
             std::cout << "Got a connect " << error << std::endl;
             if ( !error ) {
                 callback(network_connection(io_service,
                     std::unique_ptr<asio::ip::tcp::socket>(socket)));
             }
-            post_handler();
+            post_handler(listener);
         };
         listener.async_accept(*socket, handler);
     }
