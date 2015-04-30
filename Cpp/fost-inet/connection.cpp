@@ -253,8 +253,8 @@ private:
             std::cout << number << " Got " << bytes << " bytes with error " << e << std::endl;
             error = e;
             bytes_read += bytes;
-            lock.unlock();
             signal.notify_one();
+            lock.unlock();
         };
         reader(handler);
         if ( signal.wait_for(lock, std::chrono::seconds(read_timeout)) ==
