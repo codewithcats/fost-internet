@@ -20,6 +20,29 @@ using namespace fostlib;
 FSL_TEST_SUITE( data_transmission );
 
 
+FSL_TEST_FUNCTION(small_text_sends) {
+    network_connection::server server(host("0"), 6219,
+        [](network_connection cnx) {
+            utf8_string gotten;
+            std::cout << "Server waiting for request" << std::endl;
+            cnx >> gotten;
+            FSL_CHECK_EQ(gotten, "client string");
+            std::cout << "Server sending reply" << std::endl;
+            cnx << "server string\r\n";
+            std::cout << "Server done" << std::endl;
+        }
+    );
+    network_connection cnx(host("127.0.0.1"), 6219);
+    std::cout << "Client connected, sending request" << std::endl;
+    cnx << "client string\r\n";
+    utf8_string gotten;
+    std::cout << "Client waiting for server's reply" << std::endl;
+    cnx >> gotten;
+    FSL_CHECK_EQ(gotten, "server string");
+    std::cout << "Client done" << std::endl;
+}
+
+
 namespace {
     void embed_acks(network_connection cnx) {
         std::vector<unsigned char> data(0x8000);
@@ -29,22 +52,18 @@ namespace {
         }
     }
 }
-
-FSL_TEST_FUNCTION( large_send_embed_acks ) {
-    network_connection::server server(host("0.0.0.0"), 6218, embed_acks);
-    // Give enough time for thread to start
-    boost::this_thread::sleep(boost::posix_time::milliseconds(250));
-
-    network_connection cnx(host("localhost"), 6218);
-    std::string data(0x8000, 'x');
-    for ( std::size_t block(0); block < 8; ++block ) {
-        fostlib::log::debug("Sending data block", block);
-        FSL_CHECK_NOTHROW(cnx << data);
-        std::string ack;
-        FSL_CHECK_NOTHROW(cnx >> ack);
-        FSL_CHECK_EQ(ack, "ack");
-    }
-}
+// FSL_TEST_FUNCTION( large_send_embed_acks ) {
+//     network_connection::server server(host("0"), 6218, embed_acks);
+//     network_connection cnx(host("localhost"), 6218);
+//     std::string data(0x8000, 'x');
+//     for ( std::size_t block(0); block < 8; ++block ) {
+//         fostlib::log::debug("Sending data block", block);
+//         FSL_CHECK_NOTHROW(cnx << data);
+//         std::string ack;
+//         FSL_CHECK_NOTHROW(cnx >> ack);
+//         FSL_CHECK_EQ(ack, "ack");
+//     }
+// }
 
 
 namespace {
@@ -77,21 +96,20 @@ namespace {
         FSL_CHECK_NOTHROW(cnx << "ack\r\n");
     }
 }
-
-FSL_TEST_FUNCTION( large_send_ack_at_end ) {
-    network_connection::server server(host("0"), 6217, ack_at_end);
-
-    std::cout << "Trying to connect to socket" << std::endl;
-    network_connection cnx(host("localhost"), 6217);
-    std::cout << "Connected" << std::endl;
-    for ( std::size_t block(0); block < c_blocks; ++block ) {
-        std::cout << "Sending block " << block << std::endl;
-        std::string data(0x8000, "0123456789"[block %10]);
-        FSL_CHECK_NOTHROW(cnx << data);
-        std::cout << "Data sent for block " << block << std::endl;
-    }
-    std::cout << "All data sent, waiting for ack" << std::endl;
-    std::string ack;
-    FSL_CHECK_NOTHROW(cnx >> ack);
-    FSL_CHECK_EQ(ack, "ack");
-}
+// FSL_TEST_FUNCTION( large_send_ack_at_end ) {
+//     network_connection::server server(host("0"), 6217, ack_at_end);
+//
+//     std::cout << "Trying to connect to socket" << std::endl;
+//     network_connection cnx(host("localhost"), 6217);
+//     std::cout << "Connected" << std::endl;
+//     for ( std::size_t block(0); block < c_blocks; ++block ) {
+//         std::cout << "Sending block " << block << std::endl;
+//         std::string data(0x8000, "0123456789"[block %10]);
+//         FSL_CHECK_NOTHROW(cnx << data);
+//         std::cout << "Data sent for block " << block << std::endl;
+//     }
+//     std::cout << "All data sent, waiting for ack" << std::endl;
+//     std::string ack;
+//     FSL_CHECK_NOTHROW(cnx >> ack);
+//     FSL_CHECK_EQ(ack, "ack");
+// }
