@@ -13,15 +13,15 @@ int main() {
 
     boost::asio::io_service service;
 
+    boost::asio::ip::tcp::acceptor listener(service);
+    boost::asio::ip::tcp::socket server_socket(service);
     std::thread server([&]() {
         std::unique_lock<std::mutex> lock(mutex);
-        boost::asio::ip::tcp::acceptor listener(service);
         listener.open(boost::asio::ip::tcp::v4());
         listener.set_option(boost::asio::socket_base::enable_connection_aborted(true));
         listener.bind(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 4567));
         listener.listen();
-        boost::asio::ip::tcp::socket socket(service);
-        listener.async_accept(socket, [](const boost::system::error_code& error) {
+        listener.async_accept(server_socket, [](const boost::system::error_code& error) {
             std::cout << "Got a connection " << error << std::endl;
         });
         signal.notify_one();
@@ -29,10 +29,10 @@ int main() {
     });
     signal.wait(lock);
 
+    boost::asio::ip::tcp::socket client_socket(service);
     std::thread client([&]() {
         boost::asio::ip::tcp::endpoint address(boost::asio::ip::address_v4(0ul), 4567);
-        boost::asio::ip::tcp::socket socket(service);
-        socket.async_connect(address, [](const boost::system::error_code& error) {
+        client_socket.async_connect(address, [](const boost::system::error_code& error) {
             std::cout << "Connected " << error << std::endl;
         });
         signal.notify_one();
