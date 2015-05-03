@@ -35,6 +35,15 @@ namespace asio = boost::asio;
 
 
 namespace {
+    
+    
+    auto started(std::chrono::steady_clock::now());
+    std::ostream &log_thread() {
+        return std::cout
+            << std::setprecision(6)
+                <<(10. + (std::chrono::steady_clock::now() - started).count()  / 1e9) << " "
+            << std::this_thread::get_id() << " ";
+    }
 
 
     const setting< int64_t > c_connect_timeout(
@@ -79,7 +88,7 @@ namespace {
                 g_client_service.run();
             } catch ( ... ) {
                 again = true;
-                std::cout << "****\nClient IO service got an exception\n****" << std::endl;
+                log_thread() << "****\nClient IO service got an exception\n****" << std::endl;
             }
         } while (again);
     });
@@ -216,7 +225,7 @@ struct network_connection::state {
             if ( !lock.owns_lock() ) {
                 throw exceptions::not_implemented("Lock timeout starting async_write handler");
             }
-            std::cout << number << " Sent " << bytes << " bytes " << e << std::endl;
+            log_thread() << number << " Sent " << bytes << " bytes " << e << std::endl;
             error = e;
             sent += bytes;
             lock.unlock();
@@ -234,7 +243,7 @@ struct network_connection::state {
 
     template<typename F>
     std::vector<utf8> read(F condition, nliteral message) {
-        std::cout << number << " *** Requesting read" << std::endl;
+        log_thread() << number << " *** Requesting read" << std::endl;
         // TODO: Try to replace explicit std::function with auto in C++14
         return do_read([this, condition](std::function<void(const boost::system::error_code&, std::size_t)> handler) {
             if ( ssl ) {
@@ -246,7 +255,7 @@ struct network_connection::state {
     }
     template<typename F>
     std::vector<utf8> read_until(F condition, nliteral message) {
-        std::cout << number << " Requesting read_until" << std::endl;
+        log_thread() << number << " Requesting read_until" << std::endl;
         // TODO: Try to replace explicit std::function with auto in C++14
         return do_read([this, condition](std::function<void(const boost::system::error_code&, std::size_t)> handler) {
             if ( ssl ) {
@@ -273,7 +282,7 @@ private:
             if ( !lock.owns_lock() ) {
                 throw exceptions::not_implemented("Lock timeout starting async_read handler");
             }
-            std::cout << number << " Got " << bytes << " bytes with error " << e << std::endl;
+            log_thread() << number << " Got " << bytes << " bytes with error " << e << std::endl;
             error = e;
             bytes_read += bytes;
             signal.notify_one();
@@ -286,7 +295,7 @@ private:
             input_buffer.sgetn(reinterpret_cast<char*>(data.data()), bytes_read);
             return data;
         } else {
-            std::cout << number << " Time out" << std::endl;
+            log_thread() << number << " Time out in do_read" << std::endl;
             socket->close();
             throw exceptions::socket_error(asio::error::timed_out, message);
         }
@@ -399,7 +408,7 @@ network_connection &fostlib::network_connection::operator >> (std::vector< utf8 
     std::size_t read = 0;
     while ( read < v.size() ) {
         const std::size_t this_chunk{std::min(v.size() - read, chunk)};
-        std::cout << "Requesting a read of " << this_chunk << " bytes" << std::endl;
+        log_thread() << "Requesting a read of " << this_chunk << " bytes" << std::endl;
         std::vector<utf8> block{pimpl->read(
             asio::transfer_exactly(this_chunk),
             "Reading a block of data")};

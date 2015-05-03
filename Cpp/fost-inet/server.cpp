@@ -11,6 +11,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <iomanip>
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -18,6 +19,17 @@
 
 using namespace fostlib;
 namespace asio = boost::asio;
+
+
+namespace {
+    auto started(std::chrono::steady_clock::now());
+    std::ostream &log_thread() {
+        return std::cout
+            << std::setprecision(6)
+                <<(10. + (std::chrono::steady_clock::now() - started).count()  / 1e9) << " "
+            << std::this_thread::get_id() << " ";
+    }
+}
 
 
 struct network_connection::server::state {
@@ -60,7 +72,7 @@ struct network_connection::server::state {
         io_worker = std::move(std::thread([this, &mutex, &signal]() {
             std::unique_lock<std::mutex> lock(mutex);
             lock.unlock();
-            std::cout << "Signalling that io_service is about to run" << std::endl;
+            log_thread() << "Signalling that io_service is about to run" << std::endl;
             signal.notify_one();
             bool again = false;
             do {
@@ -68,34 +80,34 @@ struct network_connection::server::state {
                 try {
                     io_service.run();
                     if ( !stop ) {
-                        std::cout << "Run out of work, going again" << std::endl;
+                        log_thread() << "Run out of work, going again" << std::endl;
                         again = true;
                         post_handler(ipv4_listener);
                         post_handler(ipv6_listener);
                     }
                 } catch ( std::exception &e ) {
                     again = true;
-                    std::cout << "**** Caught " << e.what() << std::endl;
+                    log_thread() << "**** Caught " << e.what() << std::endl;
                 } catch ( ... ) {
                     again = true;
-                    std::cout << "Unknown exception caught" << std::endl;
+                    log_thread() << "Unknown exception caught" << std::endl;
                 }
             } while ( again );
-            std::cout << "Service thread stopping" << std::endl;
+            log_thread() << "Service thread stopping" << std::endl;
         }));
         signal.wait(lock);
-        std::cout << "Start up of server complete" << std::endl;
+        log_thread() << "Start up of server complete" << std::endl;
     }
 
     ~state() {
-        std::cout << "Server tear down requested" << std::endl;
+        log_thread() << "Server tear down requested" << std::endl;
         stop = true;
         io_service.stop();
         io_worker.join();
     }
 
     void post_handler(boost::asio::ip::tcp::acceptor&listener) {
-        std::cout << "Going to listen for another connect" << std::endl;
+        log_thread() << "Going to listen for another connect" << std::endl;
         /*
         * Socket handling is awkward. It's lifetime must at least match the accept handler
         * This code assumes there is only a single accept handler that is waiting at any time
@@ -106,17 +118,17 @@ struct network_connection::server::state {
         // TODO: Change to std::move captured in the closure in C++14
         asio::ip::tcp::socket *socket(new asio::ip::tcp::socket(io_service));
         auto handler = [this, socket, &listener](const boost::system::error_code& error) {
-            std::cout << "Got a connect " << error << std::endl;
+            log_thread() << "Got a connect " << error << std::endl;
             if ( !error ) {
                 try {
                     callback(network_connection(io_service,
                         std::unique_ptr<asio::ip::tcp::socket>(socket)));
                 } catch ( exceptions::exception &e ) {
-                    std::cout << "Callback handler caught " << e << std::endl;
+                    log_thread() << "Callback handler caught " << e << std::endl;
                 } catch ( std::exception &e ) {
-                    std::cout << "Callback handler caught " << e.what() << std::endl;
+                    log_thread() << "Callback handler caught " << e.what() << std::endl;
                 } catch ( ... ) {
-                    std::cout << "Caught an unkown exception" << std::endl;
+                    log_thread() << "Caught an unkown exception" << std::endl;
                 }
             }
             post_handler(listener);
