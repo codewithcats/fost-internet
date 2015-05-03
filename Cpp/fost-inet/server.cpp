@@ -131,7 +131,7 @@ struct network_connection::server::state {
                 } catch ( std::exception &e ) {
                     log_thread() << "Callback handler caught " << e.what() << std::endl;
                 } catch ( ... ) {
-                    log_thread() << "Caught an unkown exception" << std::endl;
+                    log_thread() << "Callback handler caught an unkown exception" << std::endl;
                 }
             }
             post_handler(listener);
