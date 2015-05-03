@@ -131,6 +131,9 @@ struct network_connection::state {
             read_timeout(coerce<int>(c_read_timeout.value())),
             write_timeout(coerce<int>(c_write_timeout.value())) {
     }
+    ~state() {
+        log_thread() << number << " ~state()" << std::endl;
+    }
 
     void start_ssl() {
         ssl.reset(new ssl_data(io_service, *socket));
