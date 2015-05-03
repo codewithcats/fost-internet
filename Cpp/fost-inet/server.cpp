@@ -122,6 +122,7 @@ struct network_connection::server::state {
         asio::ip::tcp::socket *socket(new asio::ip::tcp::socket(io_service));
         auto handler = [this, socket, &listener](const boost::system::error_code& error) {
             log_thread() << "Got a connect " << error << std::endl;
+            post_handler(listener); // Post the replacement handler ASAP
             if ( !error ) {
                 try {
                     callback(network_connection(io_service,
@@ -134,7 +135,6 @@ struct network_connection::server::state {
                     log_thread() << "Callback handler caught an unkown exception" << std::endl;
                 }
             }
-            post_handler(listener);
         };
         listener.async_accept(*socket, handler);
     }
