@@ -300,7 +300,7 @@ private:
         } else {
             log_thread() << number << " Time out in do_read" << std::endl;
             socket->close();
-            throw exceptions::socket_error(asio::error::timed_out, message);
+            throw exceptions::read_timeout();
         }
     }
 };
